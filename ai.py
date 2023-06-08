@@ -11,6 +11,9 @@ class AI(Player):
     def play(self) -> int:
         return self.minimax(self.game, 3)
 
+    def __repr__(self):
+        return super().__repr__().replace("Player", "AI 🤖")
+
     def check(self, game: Game, player_id: int):
         score = 0
         finds = []

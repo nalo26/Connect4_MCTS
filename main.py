@@ -3,8 +3,11 @@ class Player:
         self.player_id = player_id
 
     def play(self) -> int:
-        column = int(input(f"[Player {self.player_id}] > "))
+        column = int(input(f"[{self}] > "))
         return column - 1
+
+    def __repr__(self):
+        return f"{Board.tokens[self.player_id]} Player {self.player_id}"
 
 
 class Game:
@@ -21,7 +24,7 @@ class Game:
             self.play_turn()
             self.board.print_board()
             if self.check_win():
-                print(f"Player {self.current_player_id + 1} won !")
+                print(f"{self.current_player()} won ! 🎉")
                 break
             self.switch_player()
 
@@ -46,6 +49,7 @@ class Board:
         self.board = [[0 for _ in range(7)] for _ in range(6)]
 
     def print_board(self) -> None:
+        print()
         print(" " + " ".join([str(i + 1) for i in range(7)]))
         print(" v" * 7)
         for row in self.board:
