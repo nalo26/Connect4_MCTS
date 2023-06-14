@@ -12,7 +12,7 @@ class Player:
 
 class Game:
     def __init__(self):
-        from ai import AI
+        from ai import AI  # noqa
 
         self.board = Board()
         # self.players = [Player(1), Player(2)]
@@ -57,7 +57,7 @@ class Board:
         for row in self.board:
             print("".join([Board.tokens[char] for char in row]))
 
-    def play(self, column, player_id) -> None:
+    def play(self, column, player_id) -> bool:
         if self.board[0][column] != 0:
             return False
         for i in range(6):

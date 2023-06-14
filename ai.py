@@ -1,6 +1,6 @@
 import re
 
-from algoritms import Minimax, AlphaBeta
+from algoritms import Minimax, AlphaBeta, UCT  # noqa
 from main import Board, Player
 from utils import diagonals_board, rotate_board, rows_to_strings
 
@@ -10,10 +10,11 @@ class AI(Player):
         super().__init__(player_id)
         self.board = board
         # self.algorithm = Minimax(self.evaluate, self.player_id)
-        self.algorithm = AlphaBeta(self.evaluate, self.player_id)
+        # self.algorithm = AlphaBeta(self.evaluate, self.player_id)
+        self.algorithm = UCT(self.board, self.player_id)
 
     def play(self) -> int:
-        column = self.algorithm.run(board=self.board, max_depth=6)
+        column = self.algorithm.run(board=self.board, max_depth=4)
         print(f"[{self}] > {column + 1}")
         return column
 
