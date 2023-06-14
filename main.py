@@ -15,7 +15,9 @@ class Game:
         from ai import AI
 
         self.board = Board()
-        self.players = [Player(1), AI(2)]
+        # self.players = [Player(1), Player(2)]
+        # self.players = [Player(1), AI(2, self.board)]
+        self.players = [AI(1, self.board), AI(2, self.board)]
         self.current_player_id = 0
 
     def play(self) -> None:
@@ -23,20 +25,20 @@ class Game:
         while True:
             self.play_turn()
             self.board.print_board()
-            if self.check_win():
+            if self.board.check_win():
                 print(f"{self.current_player()} won ! 🎉")
                 break
             self.switch_player()
 
     def play_turn(self) -> None:
-        column = self.current_player().play()
-        self.board.play(column, self.current_player_id)
+        while True:
+            column = self.current_player().play()
+            if self.board.play(column, self.current_player_id + 1):
+                break
+            self.board.print_board()
 
     def current_player(self) -> Player:
         return self.players[self.current_player_id]
-
-    def check_win(self) -> bool:
-        return self.board.check_win()
 
     def switch_player(self) -> None:
         self.current_player_id = (self.current_player_id + 1) % 2
@@ -56,11 +58,14 @@ class Board:
             print("".join([Board.tokens[char] for char in row]))
 
     def play(self, column, player_id) -> None:
+        if self.board[0][column] != 0:
+            return False
         for i in range(6):
             if self.board[i][column] != 0:
                 i -= 1
                 break
-        self.board[i][column] = player_id + 1
+        self.board[i][column] = player_id
+        return True
 
     def check_win(self) -> bool:
         """Check if the current player has won the game"""
