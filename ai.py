@@ -11,10 +11,11 @@ class AI(Player):
         self.board = board
         # self.algorithm = Minimax(self.evaluate, self.player_id)
         # self.algorithm = AlphaBeta(self.evaluate, self.player_id)
-        self.algorithm = UCT(self.board, self.player_id)
+        self.algorithm = UCT(self.player_id)
 
     def play(self) -> int:
-        column = self.algorithm.run(board=self.board, max_depth=4)
+        # column = self.algorithm.run(board=self.board, max_depth=4)
+        column = self.algorithm.run(board=self.board, max_iterations=10000)
         print(f"[{self}] > {column + 1}")
         return column
 

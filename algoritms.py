@@ -4,7 +4,6 @@ from typing import Callable
 import random
 import math
 from main import Board
-from collections import defaultdict
 
 
 class Algorithm(ABC):
@@ -26,7 +25,7 @@ class Minimax(Algorithm):
         return action
 
     def max_player(self, board: Board, p: int) -> tuple[int, int]:
-        if board.check_win() or p == 0:
+        if board.is_over() or p == 0:
             return self.evaluate(board), None
         actions = {}
         for a in range(7):
@@ -37,12 +36,12 @@ class Minimax(Algorithm):
         max_u = max(actions.values())
         return max_u, random.choice([k for k, v in actions.items() if v == max_u])
 
-    def min_player(self, n: Board, p: int) -> tuple[int, int]:
-        if n.check_win() or p == 0:
-            return self.evaluate(n), None
+    def min_player(self, board: Board, p: int) -> tuple[int, int]:
+        if board.is_over() or p == 0:
+            return self.evaluate(board), None
         actions = {}
         for a in range(7):
-            new_board = deepcopy(n)
+            new_board = deepcopy(board)
             if not new_board.play(a, self.player_id % 2 + 1):
                 continue
             actions[a] = self.max_player(new_board, p - 1)[0]
@@ -61,7 +60,7 @@ class AlphaBeta(Algorithm):
     def max_player(
         self, board: Board, p: int, alpha: float, beta: float
     ) -> tuple[int, int]:
-        if board.check_win() or p == 0:
+        if board.is_over() or p == 0:
             return self.evaluate(board), None
         u = -float("inf")
         action = None
@@ -79,14 +78,14 @@ class AlphaBeta(Algorithm):
         return u, action
 
     def min_player(
-        self, n: Board, p: int, alpha: float, beta: float
+        self, board: Board, p: int, alpha: float, beta: float
     ) -> tuple[int, int]:
-        if n.check_win() or p == 0:
-            return self.evaluate(n), None
+        if board.is_over() or p == 0:
+            return self.evaluate(board), None
         u = float("inf")
         action = None
         for a in range(7):
-            new_board = deepcopy(n)
+            new_board = deepcopy(board)
             if not new_board.play(a, self.player_id % 2 + 1):
                 continue
             eval, _ = self.max_player(new_board, p - 1, alpha, beta)
@@ -99,82 +98,87 @@ class AlphaBeta(Algorithm):
         return u, action
 
 
-class UCT(Algorithm):
-    def __init__(self, state: Board, player_id: int, parent=None, parent_action=None):
-        self.player_id = player_id
+class UCTNode:
+    def __init__(self, state: Board, player_id: int, action: int = None, parent=None):
         self.state = state
         self.parent = parent
-        self.parent_action = parent_action
-        self.action = None
-        self.children = []
-        self._number_of_visits = 0
-        self._results = defaultdict(int)
-        self._results[1] = 0
-        self._results[-1] = 0
-        self._untried_actions = list(range(7))
+        self.current_player_id = player_id
+        self.children: list[UCTNode] = []
+        self.action = action
+        self.wins = 0
+        self.visits = 0
 
-    def q(self):
-        wins = self._results[1]
-        loses = self._results[-1]
-        return wins - loses
+    def expand(self):
+        actions = self.state.get_possible_actions()
+        action = actions.pop(random.randint(0, len(actions) - 1))
+        new_state = deepcopy(self.state)
+        new_id = self.current_player_id % 2 + 1
+        new_state.play(action, new_id)
+        new_node = UCTNode(new_state, new_id, action, self)
+        self.children.append(new_node)
+        return new_node
 
-    def run(self, **kwargs) -> int:
-        return self.uctSearch(kwargs["board"]).action
+    def best_child(self, c=1):
+        return max(self.children, key=lambda node: node.get_uct_score(c))
 
-    def uctSearch(self, s0: Board) -> "UCT":
-        number_of_simulations = 100
+    def update(self, result):
+        self.visits += 1
+        self.wins += result
 
-        for _ in range(number_of_simulations):
-            v = self.treePolicy(s0)
-            reward = v.rollout()
-            v.backpropagate(reward)
-        return self.best_child(c_param=0.0)
-
-    def treePolicy(self, v: Board) -> "UCT":
-        current = self
-        while not v.check_win():
-            if not current.is_fully_expanded():
-                return current.expand(v)
-            else:
-                current = current.best_child()
-        return current
-
-    def expand(self, v: Board) -> "UCT":
-        action = self._untried_actions.pop()
-        next_state = deepcopy(v)
-        next_state.play(action, self.player_id)
-        child_node = UCT(
-            next_state, self.player_id % 2 + 1, parent=self, parent_action=action
+    def get_uct_score(self, c):
+        exploration_factor = c
+        if self.visits == 0:
+            return float("inf")
+        exploitation = self.wins / self.visits
+        exploration = exploration_factor * math.sqrt(
+            math.log(self.parent.visits) / self.visits
         )
-        child_node.action = action
+        return exploitation + exploration
 
-        self.children.append(child_node)
-        return child_node
+    def get_best_action(self):
+        best_child = self.best_child(0)
+        return best_child.action
 
-    def rollout(self) -> int:
-        while not self.state.check_win():
-            action = random.randint(0, 6)
-            if not self.state.play(action, self.player_id):
-                continue
-        return 1 if self.state.check_win() else -1
 
-    def backpropagate(self, result: int) -> None:
-        self._number_of_visits += 1
-        self._results[result] += 1
-        if self.parent:
-            self.parent.backpropagate(result)
+class UCT(Algorithm):
+    def __init__(self, player_id):
+        self.player_id = player_id
 
-    def is_fully_expanded(self) -> bool:
-        return len(self._untried_actions) == 0
+    def run(self, **kwargs):
+        max_iterations = kwargs.get("max_iterations", 1000)
+        root = UCTNode(kwargs.get("board"), self.player_id)
+        for _ in range(max_iterations):
+            node = self.tree_policy(root)
+            state = node.state
+            delta = self.default_policy(state, node.current_player_id)
+            self.backup(node, delta)
 
-    def best_child(self, c_param=0.1) -> "UCT":
-        choices_weights = [
-            (c.q() / c._number_of_visits)
-            + c_param
-            * math.sqrt((2 * math.log(self._number_of_visits) / c._number_of_visits))
-            for c in self.children
-        ]
-        return self.children[choices_weights.index(max(choices_weights))]
+        return root.get_best_action()
 
-    def rollout_policy(self, possibleMoves: list) -> int:
-        return possibleMoves[random.randint(len(possibleMoves))]
+    def tree_policy(self, node: UCTNode) -> UCTNode:
+        state = node.state
+        while not state.is_over():
+            if len(node.children) == 0:
+                return node.expand()
+            node = node.best_child()
+            state = node.state
+        return node
+
+    def backup(self, node: UCTNode, delta: int):
+        while node is not None:
+            node.visits += 1
+            node.wins += delta
+            delta = -delta
+            node = node.parent
+
+    def default_policy(self, state: Board, player_id: int):
+        while not state.is_over():
+            actions = state.get_possible_actions()
+            if len(actions) == 0:
+                break
+            action = random.choice(actions)
+            state = deepcopy(state)
+            state.play(action, player_id)
+        if state.check_win(player_id):
+            return 1 if player_id == self.player_id else -1
+        return 0

@@ -16,8 +16,8 @@ class Game:
 
         self.board = Board()
         # self.players = [Player(1), Player(2)]
-        # self.players = [Player(1), AI(2, self.board)]
-        self.players = [AI(1, self.board), AI(2, self.board)]
+        self.players = [Player(1), AI(2, self.board)]
+        # self.players = [AI(1, self.board), AI(2, self.board)]
         self.current_player_id = 0
 
     def play(self) -> None:
@@ -25,7 +25,7 @@ class Game:
         while True:
             self.play_turn()
             self.board.print_board()
-            if self.board.check_win():
+            if self.board.check_win(self.current_player_id + 1):
                 print(f"{self.current_player()} won ! 🎉")
                 break
             self.switch_player()
@@ -45,7 +45,7 @@ class Game:
 
 
 class Board:
-    tokens = {0: "🔘", 1: "🟡", 2: "🔴"}
+    tokens = {0: "⚫", 1: "🟡", 2: "🔴"}
 
     def __init__(self):
         self.board = [[0 for _ in range(7)] for _ in range(6)]
@@ -67,12 +67,21 @@ class Board:
         self.board[i][column] = player_id
         return True
 
-    def check_win(self) -> bool:
+    def get_possible_actions(self) -> list[int]:
+        return [i for i in range(7) if self.board[0][i] == 0]
+
+    def check_win(self, player_id) -> bool:
         """Check if the current player has won the game"""
         # Horizontal check
         for row in self.board:
             for col in range(4):
-                if row[col] == row[col + 1] == row[col + 2] == row[col + 3] != 0:
+                if (
+                    row[col]
+                    == row[col + 1]
+                    == row[col + 2]
+                    == row[col + 3]
+                    == player_id
+                ):
                     return True
         # Vertical check
         for col in range(len(self.board[0])):
@@ -82,7 +91,7 @@ class Board:
                     == self.board[row + 1][col]
                     == self.board[row + 2][col]
                     == self.board[row + 3][col]
-                    != 0
+                    == player_id
                 ):
                     return True
 
@@ -94,7 +103,7 @@ class Board:
                     == self.board[row + 1][col + 1]
                     == self.board[row + 2][col + 2]
                     == self.board[row + 3][col + 3]
-                    != 0
+                    == player_id
                 ):
                     return True
                 if (
@@ -102,10 +111,13 @@ class Board:
                     == self.board[row + 1][col + 2]
                     == self.board[row + 2][col + 1]
                     == self.board[row + 3][col]
-                    != 0
+                    == player_id
                 ):
                     return True
         return False
+
+    def is_over(self) -> bool:
+        return self.check_win(1) or self.check_win(2)
 
 
 if __name__ == "__main__":
