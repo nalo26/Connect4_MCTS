@@ -3,7 +3,7 @@ class Player:
         self.player_id = player_id
 
     def play(self) -> int:
-        column = int(input(f"[{self}] > "))
+        column = int(input(f"[{self}] >"))
         return column - 1
 
     def __repr__(self):
@@ -16,8 +16,8 @@ class Game:
 
         self.board = Board()
         # self.players = [Player(1), Player(2)]
-        self.players = [Player(1), AI(2, self.board)]
-        # self.players = [AI(1, self.board), AI(2, self.board)]
+        # self.players = [Player(1), AI(2, self.board)]
+        self.players = [AI(1, self.board), AI(2, self.board)]
         self.current_player_id = 0
 
     def play(self) -> None:

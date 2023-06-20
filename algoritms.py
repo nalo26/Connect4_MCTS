@@ -102,31 +102,30 @@ class UCTNode:
     def __init__(self, state: Board, player_id: int, action: int = None, parent=None):
         self.state = state
         self.parent = parent
-        self.current_player_id = player_id
+        self.player_id = player_id
         self.children: list[UCTNode] = []
+        self.actions = state.get_possible_actions()
         self.action = action
         self.wins = 0
         self.visits = 0
 
-    def expand(self):
-        actions = self.state.get_possible_actions()
-        action = actions.pop(random.randint(0, len(actions) - 1))
+    def expand(self) -> "UCTNode":
+        action = self.actions.pop(random.randint(0, len(self.actions) - 1))
         new_state = deepcopy(self.state)
-        new_id = self.current_player_id % 2 + 1
-        new_state.play(action, new_id)
-        new_node = UCTNode(new_state, new_id, action, self)
+        new_state.play(action, self.player_id % 2 + 1)
+        new_node = UCTNode(new_state, self.player_id % 2 + 1, action, self)
         self.children.append(new_node)
         return new_node
 
-    def best_child(self, c=1):
+    def best_child(self, c=None):
         return max(self.children, key=lambda node: node.get_uct_score(c))
 
     def update(self, result):
         self.visits += 1
         self.wins += result
 
-    def get_uct_score(self, c):
-        exploration_factor = c
+    def get_uct_score(self, c: float = None):
+        exploration_factor = c if c else math.sqrt(2)
         if self.visits == 0:
             return float("inf")
         exploitation = self.wins / self.visits
@@ -135,7 +134,7 @@ class UCTNode:
         )
         return exploitation + exploration
 
-    def get_best_action(self):
+    def get_best_action(self) -> int:
         best_child = self.best_child(0)
         return best_child.action
 
@@ -144,24 +143,21 @@ class UCT(Algorithm):
     def __init__(self, player_id):
         self.player_id = player_id
 
-    def run(self, **kwargs):
+    def run(self, **kwargs) -> int:
         max_iterations = kwargs.get("max_iterations", 1000)
-        root = UCTNode(kwargs.get("board"), self.player_id)
+        root = UCTNode(kwargs.get("board"), self.player_id % 2 + 1)
         for _ in range(max_iterations):
             node = self.tree_policy(root)
-            state = node.state
-            delta = self.default_policy(state, node.current_player_id)
+            delta = self.default_policy(node.state, node.player_id)
             self.backup(node, delta)
 
         return root.get_best_action()
 
     def tree_policy(self, node: UCTNode) -> UCTNode:
-        state = node.state
-        while not state.is_over():
-            if len(node.children) == 0:
+        while not node.state.is_over():
+            if len(node.actions) > 0:
                 return node.expand()
             node = node.best_child()
-            state = node.state
         return node
 
     def backup(self, node: UCTNode, delta: int):
@@ -171,14 +167,19 @@ class UCT(Algorithm):
             delta = -delta
             node = node.parent
 
-    def default_policy(self, state: Board, player_id: int):
+    def default_policy(self, _state: Board, player_id: int) -> int:
+        player = player_id % 2 + 1
+        state = deepcopy(_state)
         while not state.is_over():
             actions = state.get_possible_actions()
             if len(actions) == 0:
                 break
             action = random.choice(actions)
-            state = deepcopy(state)
-            state.play(action, player_id)
-        if state.check_win(player_id):
-            return 1 if player_id == self.player_id else -1
-        return 0
+            state.play(action, player)
+            player = player % 2 + 1
+
+        is_self_win = state.check_win(player_id)
+        is_oppo_win = state.check_win(player_id % 2 + 1)
+        if is_self_win == is_oppo_win:
+            return 0
+        return 1 if is_self_win else -1
