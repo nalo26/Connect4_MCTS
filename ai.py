@@ -6,16 +6,23 @@ from utils import diagonals_board, rotate_board, rows_to_strings
 
 
 class AI(Player):
-    def __init__(self, player_id, board: Board):
+    def __init__(self, player_id, board: Board, alg : str):
         super().__init__(player_id)
         self.board = board
         # self.algorithm = Minimax(self.evaluate, self.player_id)
         # self.algorithm = AlphaBeta(self.evaluate, self.player_id)
-        self.algorithm = UCT(self.player_id)
+        if alg == "UCT":
+            self.algorithm = UCT(self.player_id)
+        elif alg == "AlphaBeta":
+            self.algorithm = AlphaBeta(self.evaluate, self.player_id)
+        elif alg == "Minimax":
+            self.algorithm = Minimax(self.evaluate, self.player_id)
 
     def play(self) -> int:
-        # column = self.algorithm.run(board=self.board, max_depth=4)
-        column = self.algorithm.run(board=self.board, max_iterations=10000)
+        if isinstance(self.algorithm, Minimax) or isinstance(self.algorithm, AlphaBeta):
+            column = self.algorithm.run(board=self.board, max_depth=4)
+        else:
+            column = self.algorithm.run(board=self.board, max_iterations=10000)
         print(f"[{self}] > {column + 1}")
         return column
 
