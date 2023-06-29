@@ -16,8 +16,8 @@ class Game:
 
         self.board = Board()
         # self.players = [Player(1), Player(2)]
-        # self.players = [Player(1), AI(2, self.board)]
-        self.players = [AI(1, self.board, "AlphaBeta"), AI(2, self.board, "UCT")]
+        self.players = [Player(1), AI(2, self.board, "UCT")]
+        # self.players = [AI(1, self.board, "AlphaBeta"), AI(2, self.board, "UCT")]
         self.current_player_id = 0
 
     def play(self) -> None:

@@ -151,7 +151,24 @@ class UCT(Algorithm):
             delta = self.default_policy(node.state, node.player_id)
             self.backup(node, delta)
 
+        node = root
+        depth, total_nodes, nodes = self.nodes_count(root, 0)
+        print(f"total: {total_nodes}")
+        print(f"nodes: {nodes}")
+        print(f"depth: {depth}")
         return root.get_best_action()
+
+    def nodes_count(self, node: UCTNode, depth: int) -> int:
+        count = {depth + 1: len(node.children)}
+        n = 1
+        depths = [0]
+        for child in node.children:
+            d, _n, res = self.nodes_count(child, depth + 1)
+            n += _n
+            depths.append(d)
+            for k, v in res.items():
+                count[k] = count.get(k, 0) + v
+        return max(depth, max(depths)), n, count
 
     def tree_policy(self, node: UCTNode) -> UCTNode:
         while not node.state.is_over():
